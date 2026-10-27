@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Mission Control - NASA 2026</title>
+    
+    <!-- Fuentes de Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        space: '#050505',
+                        panel: 'rgba(20, 20, 25, 0.6)',
+                        mars: '#e85d2e',
+                        marsLight: '#ff8c5a'
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-space text-gray-300 font-sans min-h-screen relative overflow-x-hidden">
+
+    <!-- Fondo estrellado animado -->
+    <div class="fixed inset-0 z-0 opacity-40" style="background-image: radial-gradient(circle at 15% 50%, rgba(232, 93, 46, 0.15), transparent 25%), radial-gradient(circle at 85% 30%, rgba(0, 150, 255, 0.15), transparent 25%);"></div>
+    <div class="fixed inset-0 z-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+
+    <!-- Contenido Principal -->
+    <div class="relative z-10 max-w-7xl mx-auto p-6 flex flex-col h-screen">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-end border-b border-gray-700/50 pb-4 mb-6">
+            <div>
+                <h1 class="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                    <span class="text-mars">MARS</span> Mission Control
+                </h1>
+                <p class="text-gray-400 mt-1 font-mono text-sm tracking-widest">GUÍA DE SUPERVIVENCIA INTERPLANETARIA // NASA 2026</p>
+            </div>
+            <div class="flex items-center gap-3 bg-green-500/10 border border-green-500/30 px-4 py-2 rounded-full">
+                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
+                <span class="text-green-500 text-sm font-bold tracking-wider">ENLACE EN VIVO</span>
+            </div>
+        </header>
+
+        <!-- Panel de Estadísticas (KPIs) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-panel backdrop-blur-md border border-gray-700/50 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-bl-full"></div>
+                <p class="text-gray-400 text-sm font-semibold mb-1">NIVEL DE BATERÍA</p>
+                <div class="flex items-baseline gap-2">
+                    <span id="kpiBateria" class="text-4xl font-bold text-white font-mono">--</span>
+                    <span class="text-gray-500">%</span>
+                </div>
+            </div>
+            
+            <div class="bg-panel backdrop-blur-md border border-gray-700/50 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-bl-full"></div>
+                <p class="text-gray-400 text-sm font-semibold mb-1">TEMP. EXTERIOR</p>
+                <div class="flex items-baseline gap-2">
+                    <span id="kpiTemp" class="text-4xl font-bold text-white font-mono">--</span>
+                    <span class="text-gray-500">°C</span>
+                </div>
+            </div>
+
+            <div class="bg-panel backdrop-blur-md border border-gray-700/50 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-bl-full"></div>
+                <p class="text-gray-400 text-sm font-semibold mb-1">ÚLTIMA SEÑAL</p>
+                <div class="flex items-baseline gap-2">
+                    <span id="kpiTiempo" class="text-4xl font-bold text-white font-mono">--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controles de Capas -->
+        <div class="flex justify-between items-center bg-panel backdrop-blur-md border border-gray-700/50 rounded-xl p-3 mb-6 shadow-lg">
+            <span class="text-sm font-bold text-gray-300 px-2">FILTROS DE TELEMETRÍA</span>
+            <div class="flex gap-6">
+                <label class="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                    <input type="checkbox" id="chkBateria" checked class="accent-mars w-4 h-4"> 
+                    <span class="text-sm">Datos de Batería</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                    <input type="checkbox" id="chkSensores" checked class="accent-mars w-4 h-4"> 
+                    <span class="text-sm">Sensores Ambientales</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Layout Principal: Mapa y Lista -->
+        <div class="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 pb-6">
+            
+            <!-- Mapa -->
+            <div class="flex-[2] relative rounded-2xl border border-gray-700/50 overflow-hidden shadow-2xl bg-black">
+                <div id="mapa" class="absolute inset-0 bg-cover bg-center opacity-80" 
+                     style="background-image: url('https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2000&auto=format&fit=crop');">
+                </div>
+                
+                <!-- Grid del mapa superpuesto -->
+                <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+
+                <!-- Etiqueta del mapa -->
+                <div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
+                    <span class="bg-black/70 backdrop-blur-md border border-white/10 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-2">
+                        <svg class="w-4 h-4 text-mars" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        SECTOR GALE CRATER
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Lista de Datos -->
+            <div class="flex-1 flex flex-col bg-panel backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl overflow-hidden">
+                <div class="p-4 border-b border-gray-700/50 bg-black/20 flex justify-between items-center">
+                    <h3 class="text-white font-bold tracking-wide">REGISTRO DE TELEMETRÍA</h3>
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                </div>
+                
+                <div id="listaDatos" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                    <div id="cargando" class="flex flex-col items-center justify-center h-full text-gray-500 gap-3">
+                        <svg class="animate-spin h-8 w-8 text-mars" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span class="font-mono text-sm tracking-widest">ESPERANDO SEÑAL DEL ROVER...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qxlhxfonjgjxwvbmynud.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_VkB9czSMw0CTtn2fzFpGOQ_18T6u3u1';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const mapaDiv = document.getElementById('mapa');
+        const listaDiv = document.getElementById('listaDatos');
+        const cargando = document.getElementById('cargando');
+        const chkBateria = document.getElementById('chkBateria');
+        const chkSensores = document.getElementById('chkSensores');
+        
+        // Elementos de las tarjetas KPI
+        const kpiBateria = document.getElementById('kpiBateria');
+        const kpiTemp = document.getElementById('kpiTemp');
+        const kpiTiempo = document.getElementById('kpiTiempo');
+
+        let ultimoPunto = null;
+
+        function crearElementos(dato) {
+            // --- 1. Actualizar los KPIs Superiores ---
+            kpiBateria.innerText = dato.battery;
+            kpiBateria.className = `text-4xl font-bold font-mono ${dato.battery < 20 ? 'text-red-500' : 'text-white'}`;
+            
+            if(dato.sensor_data) {
+                kpiTemp.innerText = dato.sensor_data.temp;
+            }
+            
+            const horaActual = new Date(dato.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            kpiTiempo.innerText = horaActual;
+
+            // --- 2. Crear Punto en el Mapa (Estilo Radar) ---
+            const puntoContainer = document.createElement('div');
+            puntoContainer.className = 'absolute transform -translate-x-1/2 -translate-y-1/2 z-10';
+            
+            // Fórmula para esparcir puntos
+            const posX = Math.abs((dato.longitude * 1000) % 85) + 5; 
+            const posY = Math.abs((dato.latitude * 1000) % 85) + 5; 
+            puntoContainer.style.left = `${posX}%`;
+            puntoContainer.style.top = `${posY}%`;
+
+            // Efecto Ping (Radar) solo en el punto más reciente
+            if(ultimoPunto) ultimoPunto.classList.remove('z-20');
+            puntoContainer.classList.add('z-20');
+            ultimoPunto = puntoContainer;
+
+            const colorPunto = dato.battery < 20 ? 'bg-red-500' : 'bg-mars';
+            const colorPing = dato.battery < 20 ? 'bg-red-500' : 'bg-mars';
+
+            puntoContainer.innerHTML = `
+                <div class="relative flex h-4 w-4">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${colorPing} opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-4 w-4 ${colorPunto} border border-white/50 shadow-[0_0_10px_currentColor]"></span>
+                </div>
+                <div class="absolute top-6 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] font-mono px-2 py-1 rounded whitespace-nowrap border border-gray-700 pointer-events-none">
+                    LAT: ${dato.latitude.toFixed(3)} LON: ${dato.longitude.toFixed(3)}
+                </div>
+            `;
+            mapaDiv.appendChild(puntoContainer);
+
+            // --- 3. Crear Tarjeta de Datos (Estilo Terminal) ---
+            let htmlBateria = chkBateria.checked ? 
+                `<div class="flex justify-between items-center text-sm border-t border-gray-800 pt-2 mt-2">
+                    <span class="text-gray-400">BATTERY</span>
+                    <span class="font-mono font-bold ${dato.battery < 20 ? 'text-red-500 animate-pulse' : 'text-green-400'}">${dato.battery}%</span>
+                 </div>` : '';
+            
+            let htmlSensor = (chkSensores.checked && dato.sensor_data) ? 
+                `<div class="flex justify-between items-center text-sm border-t border-gray-800 pt-2 mt-2">
+                    <span class="text-gray-400">TEMP</span>
+                    <span class="font-mono font-bold text-blue-400">${dato.sensor_data.temp} °C</span>
+                 </div>` : '';
+            
+            const divDato = document.createElement('div');
+            divDato.className = 'bg-black/40 border border-gray-700/50 rounded-lg p-3 hover:bg-gray-800/50 transition-colors';
+            divDato.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs text-mars font-mono font-bold">SIG_${dato.id}</span>
+                    <span class="text-xs text-gray-500 font-mono">${horaActual}</span>
+                </div>
+                <div class="text-xs text-gray-400 font-mono">
+                    POS: [${dato.latitude.toFixed(4)}, ${dato.longitude.toFixed(4)}]
+                </div>
+                ${htmlBateria}
+                ${htmlSensor}
+            `;
+            
+            // Insertar arriba
+            listaDiv.insertBefore(divDato, listaDiv.children[0]);
+            
+            // Limitar tarjetas
+            if (listaDiv.children.length > 20) {
+                listaDiv.removeChild(listaDiv.lastElementChild);
+            }
+        }
+
+        // Escuchar datos
+        db.channel('tiempo-real')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rover_telemetry' }, payload => {
+              if(cargando) cargando.style.display = 'none';
+              crearElementos(payload.new);
+          })
+          .subscribe();
+          
+        // Cargar datos iniciales si recargas la página
+        async function cargarIniciales() {
+            const { data } = await db.from('rover_telemetry').select('*').order('created_at', { ascending: false }).limit(5);
+            if(data && data.length > 0) {
+                if(cargando) cargando.style.display = 'none';
+                data.reverse().forEach(crearElementos);
+            }
+        }
+        cargarIniciales();
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</body>
+</html>
